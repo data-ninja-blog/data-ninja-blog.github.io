@@ -1,1 +1,77 @@
-theme: jekyll-theme-minimal
+# Site Settings
+name: Data-Ninja.io
+title: Data-Ninja - The dojo for the ninja working with data. 
+description: A blog for people working in the incredible world of data.
+tags:
+  - blog
+  - data
+  - azure
+email: bkettner@live.com
+show_hero: true
+menu:
+  - title: Home
+    url: /
+  - title: About
+    url: /about
+  - title: Authors
+    url: /authors
+  - title: Feed
+    url: /feed.xml
+
+# Social Media Settings
+# Remove the item if you don't need it
+github_username: benkettner
+twitter_username: DataMonsterBen
+
+# Posts Settings
+show_time_bar: true
+show_modal_on_exit: false
+show_modal_on_finish_post: true
+two_columns_layout: true
+
+# Advanced Settings
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://www.data-ninja.io" # the base hostname & protocol for your site
+# google_analytics: "UA-XXXXXXXX-X"
+language: "en"
+categories_folder: category
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+# permalink: /:title/
+permalink: /:collection/:year-:month-:day-:title:output_ext
+collections:
+  authors:
+    output: true
+paginate_path: "/page/:num/"
+show_get_theme_btn: false
+use_logo: false
+theme: jekflix
+
+# Content paginator
+paginate_content:
+  enabled: true
+  debug: false
+  collections:
+    - posts
+  auto: true
+  separator: "--page-break--"
+  permalink: "/:num/"
+  seo_canonical: true
+  properties:
+    part:
+      is_generated: true
+    last:
+      is_generated: true
+    single:
+      is_generated: true
+
+# SASS
+sass:
+  style: compressed
+
+# Plugins
+plugins:
+  - jekyll-paginate
+  - jekyll-paginate-content

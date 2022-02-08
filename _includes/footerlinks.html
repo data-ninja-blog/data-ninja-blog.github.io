@@ -1,0 +1,7 @@
+<span style="color:#333"> | </span>
+{% for item in site.menu %}
+  {% if item.title and item.url %}
+    <a href="{{ site.url }}{{ site.baseurl }}{{ item.url }}">{{ item.title }}</a> 
+    <span style="color:#333"> | </span>
+  {% endif %}
+{% endfor %}
