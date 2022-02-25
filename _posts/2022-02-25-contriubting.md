@@ -3,7 +3,7 @@ date: 2022-02-25T11:06:00.000Z
 layout: post
 title: Come in and contribute
 subtitle: 'Why data-ninja.io exists and how you can contribute'
-image: /images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpg
+image: /images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpgW
 image_source: Alan Stoddard from Pexels
 category: blog
 tags:
@@ -112,7 +112,7 @@ First, check what files you have changed in the repository by running `git statu
 
 If you do not see any unexpected changes here (I would anticipate some images, the markdown files for your blogpost and for your author profile), then you can stage your changes by typing `git add`. Running `git status` after this will again show you the changes that would occur to the repository if you were to push your changes. If, again, you see nothing unexpected, you can now commit these changes to your local repository by running `git commit -m "your commit message"`. This will create a `commit`, that is one set of changes that will be processed later. 
 
-To push this commit to the central repository of data ninja, run `git push`. 
+To push this commit to the central repository of data ninja, run `git push --set-upstream origin my_branch_name`. 
 
 Next, you will need to create a pull request that notifies us of your new content and "asks" us to integrate that into the blog. You can do so by navigating to [https://github.com/data-ninja-blog/data-ninja-blog.github.io](https://github.com/data-ninja-blog/data-ninja-blog.github.io), viewing your branch and creating a pull request as explained in the [github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
 
