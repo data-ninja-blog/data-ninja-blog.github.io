@@ -9,3 +9,5 @@ photo: /images/authors/BenKettner.png
 twitter_username:  https://www.twitter.com/DataMonsterBen
 github_username: https://github.com/benkettner
 ---
+
+I created data-ninja.io because I wanted to have a collaborative platform for content that I wanted to share with the world. 
