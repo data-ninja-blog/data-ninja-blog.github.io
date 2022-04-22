@@ -3,7 +3,7 @@ date: 2022-04-21T12:00:00.000Z
 layout: post
 title: Like a river... 
 subtitle: 'First steps towards stateful streaming in Databricks.'
-image: /images/2022-02-08-scaling-a-mountain/pexels-tomas-malik-3408354.jpg
+image: /images/2022-04-21-stateful-streaming-scala-pt1/pexels-rido-alwarno-1034887.jpg
 image_source: Rido Alwarno on Pexels
 category: Data Processing
 tags:

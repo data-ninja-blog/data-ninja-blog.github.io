@@ -3,7 +3,7 @@ date: 2022-02-25T11:06:00.000Z
 layout: post
 title: Come in and contribute
 subtitle: 'Why data-ninja.io exists and how you can contribute'
-image: /images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpgW
+image: /images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpg
 image_source: Alan Stoddard from Pexels
 category: blog
 tags:
