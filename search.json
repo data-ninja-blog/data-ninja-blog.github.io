@@ -1,0 +1,37 @@
+[
+  
+  
+  
+    {
+      "title"    : "Knowing oneself",
+      "tags"     : "Azure, Azure AD, and Key Vault",
+      "categories" : "Azure",
+      "url"      : "/posts/2023-03-29-userids-keyvault.html",
+      "date"     : "03/29/2023"
+    } ,
+  
+    {
+      "title"    : "Like a river...",
+      "tags"     : "Databricks, Azure Databricks, Spark, and Streaming",
+      "categories" : "Data Processing",
+      "url"      : "/posts/2022-04-21-stateful-streaming-scala-pt1.html",
+      "date"     : "04/21/2022"
+    } ,
+  
+    {
+      "title"    : "Come in and contribute",
+      "tags"     : "welcome and blog",
+      "categories" : "blog",
+      "url"      : "/posts/2022-02-25-contriubting.html",
+      "date"     : "02/25/2022"
+    } ,
+  
+    {
+      "title"    : "Welcome to the Dojo",
+      "tags"     : "welcome and blog",
+      "categories" : "blog",
+      "url"      : "/posts/2022-01-01-hero-welcome-to-dojo.html",
+      "date"     : "01/01/2022"
+    } 
+  
+]

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://www.data-ninja.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://www.data-ninja.io/" rel="alternate" type="text/html" /><updated>2023-03-29T13:02:16+00:00</updated><id>https://www.data-ninja.io/feed.xml</id><title type="html">Data-Ninja - The dojo for the ninja working with data.</title><subtitle>A blog for people working in the incredible world of data.</subtitle><entry><title type="html">Knowing oneself</title><link href="https://www.data-ninja.io/posts/2023-03-29-userids-keyvault.html" rel="alternate" type="text/html" title="Knowing oneself" /><published>2023-03-29T12:00:00+00:00</published><updated>2023-03-29T12:00:00+00:00</updated><id>https://www.data-ninja.io/posts/userids-keyvault</id><content type="html" xml:base="https://www.data-ninja.io/posts/2023-03-29-userids-keyvault.html">&lt;p&gt;I had to move some secrets to an Azure Key Vault during a project. To do so, I needed to complete the following steps:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Activated managed identities for the Web Apps and Functions&lt;/li&gt;
+  &lt;li&gt;Grant permissions to read secrets from the KeyVault to these identities&lt;/li&gt;
+  &lt;li&gt;Add Secrets to the KeyVault&lt;/li&gt;
+  &lt;li&gt;Create KeyVault references in the Configuration settings of the Web Apps and Functions&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;The problem was that I had next to no permissions in the Active Direcotry of the client. That made some of the taks challenging.&lt;/p&gt;
+
+&lt;h1 id=&quot;activating-managed-identities&quot;&gt;Activating Managed Identities&lt;/h1&gt;
+&lt;p&gt;This step requires creating objects in the Active Directory, so there was no way, I was able to do that, I had to ask the IT department of my client for help and had them create a managed identity for each Web App and Function that needed to access the key vault. &lt;strong&gt;Lesson learned&lt;/strong&gt;: Include the managed identity in the bicep scripts so that they are created right from the start together with your resources. This will save you a roundtrip to the IT department at a later time.&lt;/p&gt;
+
+&lt;h1 id=&quot;granting-permissions-to-the-managed-identities&quot;&gt;Granting permissions to the Managed Identities&lt;/h1&gt;
+&lt;p&gt;For this step I navigated to the Key Vault in the Azure portal. There I chose “Access policies” in the left pane to create an access policy. I selected “Get” and “List” permissions for secrets (remember the least permission principle), clicked “Next”, chose “Select a principal” (the link is annoyingly hidden in the text), in the pane that opens started to search for my function name and got… nothing… Even searching the full name (copying it from the Function I wanted to grant permissions for) did not help. So I went back to the Function app, openend the “Identity” menu entry from the left pane, copied the object ID and pasted that into the search box for selecting a principal. This did the trick and enabled me to grant permissions to my functions. So far, so good.&lt;/p&gt;
+
+&lt;h1 id=&quot;adding-secrets-to-the-keyvault&quot;&gt;Adding secrets to the KeyVault&lt;/h1&gt;
+&lt;p&gt;I thought that this step was a piece of cake, but unfortunately it was what cost me the most time. The problem was that - just like my functions and Web apps - my user did not have permission to access the key vault.&lt;/p&gt;
+
+&lt;p&gt;Of course I had to create an access policy to solve that. In order to do so I followed the steps I executed for the Functions and Web Apps, but when selecting the principal, again, searching for my name or email address did not help. I needed my “ObjectID” (how great it feels to be objectified)… But how to get that? A quick google search told me to navigate to the AD in the portal, click on the user list, select my user and find the ID there. But… you will have guessed it: no permission to open the user list in the Azure AD.&lt;/p&gt;
+
+&lt;p&gt;I tried sveral approaches, the web search suggested, none of them worked. Until I remembered my good friend PowerShell.&lt;/p&gt;
+
+&lt;p&gt;First I signed into the customers tenant&lt;/p&gt;
+&lt;div class=&quot;language-powershell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;az&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;login&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;--tenant&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; 
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, I tried, if my ObjectID is part of the account information:&lt;/p&gt;
+
+&lt;div class=&quot;language-powershell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;az&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;account&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;show&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Unfortunately, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;user&lt;/code&gt; section of that output contained only the attributes &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;name&lt;/code&gt; (containing my email address) and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;type&lt;/code&gt;. So that did not solve my problem. Next, I tried if &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;az ad user show&lt;/code&gt; could help but that requires a user id that I was trying to find, the help text, however, also mentioned the follwing commandlet&lt;/p&gt;
+&lt;div class=&quot;language-powershell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;az&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;ad&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;signed-in-user&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;show&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;And the output of that contained a field called &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;id&lt;/code&gt; that - fortunately - enabled me to grant permissions to myself to add the secrets to the KeyVault.&lt;/p&gt;
+
+&lt;h1 id=&quot;referencing-the-keyvault&quot;&gt;Referencing the KeyVault&lt;/h1&gt;
+&lt;p&gt;To finalize the task, I needed to reference the secrets from the KeyVault in my AppSettings. Many of you will already know that, but if you have never seen it, I will mention it here for completeness. To reference a KeyVault secret (in the same subscription), you can just change the AppSettings value to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;@Microsoft.KeyVault(VaultName=myvault;SecretName=mysecret)&lt;/code&gt;. I highly recommend using this syntax rather than the URL that also contains the secret version because it facilitates key rotation. If you have followed all instructions, after saving your AppSettings, a green checkmark and the information “KeyVault reference” will show up next to your setting, showing you that this setting is now read from the Keyvault. To find all the details, &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli&quot;&gt;read the documentation&lt;/a&gt;.&lt;/p&gt;</content><author><name>benkettner</name></author><category term="Azure" /><category term="Azure" /><category term="Azure AD" /><category term="Key Vault" /><summary type="html">I had to move some secrets to an Azure Key Vault during a project. To do so, I needed to complete the following steps:</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://www.data-ninja.io/images/2023-03-29-userids-keyvault/pexels-thiago-matos-3022456.png" /><media:content medium="image" url="https://www.data-ninja.io/images/2023-03-29-userids-keyvault/pexels-thiago-matos-3022456.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Like a river…</title><link href="https://www.data-ninja.io/posts/2022-04-21-stateful-streaming-scala-pt1.html" rel="alternate" type="text/html" title="Like a river…" /><published>2022-04-21T12:00:00+00:00</published><updated>2022-04-21T12:00:00+00:00</updated><id>https://www.data-ninja.io/posts/stateful-streaming-scala-pt1</id><content type="html" xml:base="https://www.data-ninja.io/posts/2022-04-21-stateful-streaming-scala-pt1.html">&lt;p&gt;At a client assignment I was tasked with developing a solution to process a stream of IoT data, evaluate a set of rules on the data stream in real time and send out messages whenever a rule was triggered. We decided on using Azure Databricks for this task, so I started researching by reading up on stream processing using Databricks and by watching some Pluralsight courses on the topic. I found that the issue comes with some challenges that are worth mentioning and so I decided to write a series of articles on the topic that highlight some of the issues we had to solve down the road to stream processing in Azure Databricks.&lt;/p&gt;
+
+&lt;h1 id=&quot;controlling-the-cost&quot;&gt;Controlling the cost&lt;/h1&gt;
+
+&lt;p&gt;One of the first issues we had to tackle in the project was controlling the cost for the Databricks instance. Imagine our shock when, after a few days of development, we looked into the cost rundown of our subscription and found out that the managed resource group Databricks had created had amassed four-digits in cost. Most of that cost came from the storage account holding the databricks file system (DBFS). After some investigation we found out that&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;our script was not optimal as it required a lot of writing and reading to and from the DBFS and&lt;/li&gt;
+  &lt;li&gt;the storage account holding the DBFS was created with a geo-redundand SKU and&lt;/li&gt;
+  &lt;li&gt;most of that cost was caused by copying data between the regions.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;We were able to mitigate the first point by rewriting our script. How this can be done will be covered in later posts of this series. To control the latter two, we needed to change the deployment of the databricks cluster.&lt;/p&gt;
+
+&lt;h2 id=&quot;modifying-the-databricks-deployment&quot;&gt;Modifying the Databricks deployment&lt;/h2&gt;
+
+&lt;p&gt;Unfortunately, the managed resources that databricks controls are created fully automatically upon deployment cannot be controlled when creating the cluster from the Azure portal. These resources just appear automagically and are completely beyond our control if we use the portal to create Azure Databricks. Fortunately, one of the project members (cudos, Frank!) found out that it is possible to change the SKU of the storage account holding the DBFS when working with an ARM (or Bicep) template to create the Databricks resource.&lt;/p&gt;
+
+&lt;p&gt;The key is to set the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;storageAccountSkuName&lt;/code&gt; parameter in the template when creating the resource (see the documentation &lt;a href=&quot;https://docs.microsoft.com/en-us/azure/templates/microsoft.databricks/workspaces?tabs=bicep&quot;&gt;here&lt;/a&gt;). Setting the storage account SKU to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Standard_LRS&lt;/code&gt; in your template will result in the storage account being created with only local redundancy instead of geo-redundancy.&lt;/p&gt;
+
+&lt;p&gt;A &lt;a href=&quot;https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/overview?tabs=bicep&quot;&gt;bicep&lt;/a&gt; template for creating a databricks cluster could then look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-bicep&quot;&gt;param workspaceName string
+param workspaceLocation string = 'WestEurope'
+var managedResourceGroupName = '${workspaceName}-managed'
+
+resource MyDatabricksWorkspace 'Microsoft.Databricks/workspaces@2021-04-01-preview' = {
+  name: workspaceName
+  location: workspaceLocation
+  sku: {
+    name: 'Standard'
+    tier: 'Standard'
+  }
+  properties: {
+    managedResourceGroupId: subscriptionResourceId('Microsoft.Resources/resourceGroups', managedResourceGroupName)
+    parameters: {
+      storageAccountSkuName: {
+        value: 'Standard_LRS'
+      }
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To deploy this template, you will need to create a resource group in which you want to deploy your workspace, copy the code above to a new blank file and run &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;az deployment group create --resource-group &amp;lt;resource-group-name&amp;gt; --template-file &amp;lt;path-to-bicep&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Of course you can alo obtain the source files for this blogpost from our &lt;a href=&quot;https://github.com/data-ninja-blog/data-ninja-blog.github.io/&quot;&gt;GitHub Repository&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;reducing-cost&quot;&gt;Reducing cost&lt;/h2&gt;
+&lt;p&gt;You can further reduce the cost your databricks workspace creates by creating clusters that are as small as possible. So, when implementing streaming jobs, you typically will not have very compute-heavy calculations that will be executed, so you can often develop on a single node cluster instead of spinning up many nodes for your development environment. That will not only help you minimize the cost for the compute instances but also reduce the cost induced by the DBFS by nto requiring to write data to DBFS for exchange between the nodes.&lt;/p&gt;
+
+&lt;h2 id=&quot;summing-all-up&quot;&gt;Summing all up&lt;/h2&gt;
+
+&lt;p&gt;So, putting it all together, you should be aware of your implementation that might utilize DBFS data movement which can create significant cost (more on programming stateful streaming jobs will be published in the next posts of this series). Furthermore, create your DBFS storage account with a locally redundant SKU to avoid geo-replication related costs by modifying the Bicep (or ARM) template as shown above. Finally, keep costs under control by creating the smalles possible clusters and scaling up if it is required.&lt;/p&gt;</content><author><name>benkettner</name></author><category term="Data Processing" /><category term="Databricks" /><category term="Azure Databricks" /><category term="Spark" /><category term="Streaming" /><summary type="html">At a client assignment I was tasked with developing a solution to process a stream of IoT data, evaluate a set of rules on the data stream in real time and send out messages whenever a rule was triggered. We decided on using Azure Databricks for this task, so I started researching by reading up on stream processing using Databricks and by watching some Pluralsight courses on the topic. I found that the issue comes with some challenges that are worth mentioning and so I decided to write a series of articles on the topic that highlight some of the issues we had to solve down the road to stream processing in Azure Databricks.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://www.data-ninja.io/images/2022-04-21-stateful-streaming-scala-pt1/pexels-rido-alwarno-1034887.jpg" /><media:content medium="image" url="https://www.data-ninja.io/images/2022-04-21-stateful-streaming-scala-pt1/pexels-rido-alwarno-1034887.jpg" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Come in and contribute</title><link href="https://www.data-ninja.io/posts/2022-02-25-contriubting.html" rel="alternate" type="text/html" title="Come in and contribute" /><published>2022-02-25T11:06:00+00:00</published><updated>2022-02-25T11:06:00+00:00</updated><id>https://www.data-ninja.io/posts/contriubting</id><content type="html" xml:base="https://www.data-ninja.io/posts/2022-02-25-contriubting.html">&lt;p&gt;This page is meant to be a collaborative effort.&lt;/p&gt;
+
+&lt;h1 id=&quot;why-does-data-ninjaio-exist&quot;&gt;Why does data-ninja.io exist?&lt;/h1&gt;
+
+&lt;p&gt;The intention behind creating this page was to give a home to the many topics that all of us work on and that don’t fit into our other blogs/pages. So the aim is to give experienced contributors a place where they can publish “one off” topics and to give new contributors a place where they can publish their first contributions and gain some reach instead of tackling the enormous task of having to build a blog and content to keep a blog interesting over a longer period of time.&lt;/p&gt;
+
+&lt;p&gt;To be specific, I started this page after tsql-ninja.com turned out to be rather successful and I found out that I cover topics on a daily basis that do not fit into the tsql-ninja brand as they do not cover relational databases but rather streaming data, digital twins, IoT solutions and even personal development. Hence I saw a need for me to have the data-ninja.&lt;/p&gt;
+
+&lt;h1 id=&quot;why-would-you-want-to-contribute&quot;&gt;Why would you want to contribute?&lt;/h1&gt;
+
+&lt;p&gt;Maybe your personal blog covers one specific topic but you have a small spike venturing into another topic. Let’s assume that you have a blog that deals with SQL Server performance tuning and then do some work on PostgreSQL in Azure. Then you might want to add that to your blog or you might decide not to dilute the specific topic of your blog by adding other topics. In that case, data-ninja.io is made for you. We offer you a fast and easy way to host topics you would like to share with the data community. Plus, with your content and your reach you will also support our “newcomer-writers” in getting out there and making a name for themselves.&lt;/p&gt;
+
+&lt;p&gt;If you don’t have a personal blog, you might find the task to start a blog and create enough content to keep your blog alive for several weeks overwhelming. However, you might still have some content that you would like to publish and share with the data-world. In this case, you can contribute to data-ninja.io. We will try our best to support you in taking your first steps towards creating data related content and publishing it to the data world. We hope as this project picks up speed that we will be able to support you with the reach this project has.&lt;/p&gt;
+
+&lt;h1 id=&quot;how-can-you-contribute&quot;&gt;How can you contribute?&lt;/h1&gt;
+
+&lt;p&gt;Contributing is easy due to the way we set up this blog. It is not based on wordpress, so you do not need a login and you do not need to contact us upfront before creating your content. Instead, it is built based on Github pages. This makes for a very neat development flow.&lt;/p&gt;
+
+&lt;p&gt;Contributing to this page is a very simple process that we will explain later in this post:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Clone the repository,&lt;/li&gt;
+  &lt;li&gt;Create your content,&lt;/li&gt;
+  &lt;li&gt;Create your author profile (if this is your first contribution),&lt;/li&gt;
+  &lt;li&gt;Commit your changes and create a pull request,&lt;/li&gt;
+  &lt;li&gt;Wait until your PR was approved.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;cloning-the-repository&quot;&gt;Cloning the repository&lt;/h2&gt;
+
+&lt;p&gt;We will assume that you are familiar with git basics. If you are not, you can check out &lt;a href=&quot;https://rogerdudler.github.io/git-guide/&quot;&gt;this&lt;/a&gt; great guide on git. The repository for this page is hosted on &lt;a href=&quot;https://github.com/data-ninja-blog/data-ninja-blog.github.io&quot;&gt;https://github.com/data-ninja-blog/data-ninja-blog.github.io&lt;/a&gt;. So to clone it, use the following command:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;git clone https://github.com/data-ninja-blog/data-ninja-blog.github.io.git
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, create a new branch in which you will contribute your content:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;git checkout -b my_branch_name
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;It is a good idea to give your branch a name that makes clear who contributed what.&lt;/p&gt;
+
+&lt;h2 id=&quot;creating-content-and-author-profile&quot;&gt;Creating content and author profile&lt;/h2&gt;
+
+&lt;p&gt;Next, you will need to create the content that you would like to contribute to the dojo. To do so, have a look at the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory in the repository. This contains the posts that are shown on the page. Each post is written in markdown format (if you are not familiar with markdown syntax, check &lt;a href=&quot;https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax&quot;&gt;this&lt;/a&gt; great guide).&lt;/p&gt;
+
+&lt;p&gt;It is important to prefix each post with some metadata that will be used by the template to format it and link the proper author profile. For this post, this section looks like this:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---
+date: 2022-02-25T11:06:00.000Z
+layout: post
+title: Come in and contribute
+subtitle: 'Why data-ninja.io exists and how you can contribute'
+image: /images/2022-02-25-contributing/pexels-aden-ardenrich-581299.jpg
+image_source: Aden Ardenrich from Pexels
+category: blog
+tags:
+  - contributing
+  - blog
+author: benkettner
+paginate: true
+is_hero: false
+---
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;As you can see, the header first gives your post a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;date&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;title&lt;/code&gt;, a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;subtitle&lt;/code&gt; that will be used when linking it from the start page. Furthermore it features an &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;image&lt;/code&gt; that will be used in the post and the overview page.&lt;/p&gt;
+
+&lt;p&gt;Please make sure that the images you use are free to use on a blog, if we are unsure if this is allowed, we will replace the images with something with appropriate licensing. A good source for images that can be used in blogs is &lt;a href=&quot;https://www.pexels.com&quot;&gt;pexels&lt;/a&gt;. If available, please also give the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;image_source&lt;/code&gt; to allow us to add attribution to the images.&lt;/p&gt;
+
+&lt;p&gt;Next, you can set a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;category&lt;/code&gt;and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tags&lt;/code&gt; that will be used to categorize your post.&lt;/p&gt;
+
+&lt;p&gt;The next entry, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;author&lt;/code&gt; is most important as this will link to your author profile and make sure you get the visibility you deserve for your contribution.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;layout&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;paginate&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;is_hero&lt;/code&gt; entries should not be modified as they change the way your post is displayed in the blog.&lt;/p&gt;
+
+&lt;p&gt;After this header, follows your content. Once you are done writing, give your file a sensible name and save it (a good naming convention is for example a short title prefixed by the date of the contribution).&lt;/p&gt;
+
+&lt;p&gt;Once this is done, you will need to create your author profile if you have not done so already. These are located in the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;_authors&lt;/code&gt; directory and are also written in markdown. Again, an author profile contains a header. In my case it looks like this:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---
+layout: author
+title: Ben Kettner aka. Tobi-San
+name: benkettner
+display_name: Ben Kettner
+position: Data Shogun
+bio: Working on and with data at ML!PA Consulting GmbH. 
+photo: /images/authors/BenKettner.png
+twitter_username:  https://www.twitter.com/DataMonsterBen
+github_username: https://github.com/benkettner
+---
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;preview-your-changes-locally&quot;&gt;Preview your changes locally&lt;/h2&gt;
+
+&lt;p&gt;This webpage uses &lt;a href=&quot;https://rubyonrails.org/&quot;&gt;Ruby on Rails&lt;/a&gt; and &lt;a href=&quot;https://jekyllrb.com/&quot;&gt;Jekyll&lt;/a&gt; as backend. In order to run the page locally, you either have to install both packages yourself or use Docker. We highly recommend using docker. For this means, we have added a Docker Compose file &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;docker-compose.yml&lt;/code&gt; to the repository of this blog. If you want to preview your changes locally, install docker on your machine (see &lt;a href=&quot;www.docker.com&quot;&gt;www.docker.com&lt;/a&gt;) and run &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;docker-compose -up&lt;/code&gt; in the directory where you checked out the repository. This should complete without errors and then serve the data-ninja.io blog on your computer. Check your changes by navigating to &lt;a href=&quot;http://localhost:4000&quot;&gt;http://localhost:4000&lt;/a&gt;. You should now see all the changes that you made. If the changes look right for you, you can commit your changes and create a pull request for us to review.&lt;/p&gt;
+
+&lt;h2 id=&quot;commit-changes-and-create-pull-request&quot;&gt;Commit changes and create pull request&lt;/h2&gt;
+
+&lt;p&gt;First, check what files you have changed in the repository by running &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git status&lt;/code&gt;. This will give you a list of all files that you added, changed or deleted since you pulled the code from the repository.&lt;/p&gt;
+
+&lt;p&gt;If you do not see any unexpected changes here (I would anticipate some images, the markdown files for your blogpost and for your author profile), then you can stage your changes by typing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git add&lt;/code&gt;. Running &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git status&lt;/code&gt; after this will again show you the changes that would occur to the repository if you were to push your changes. If, again, you see nothing unexpected, you can now commit these changes to your local repository by running &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git commit -m &quot;your commit message&quot;&lt;/code&gt;. This will create a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;commit&lt;/code&gt;, that is one set of changes that will be processed later.&lt;/p&gt;
+
+&lt;p&gt;To push this commit to the central repository of data ninja, run &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git push --set-upstream origin my_branch_name&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Next, you will need to create a pull request that notifies us of your new content and “asks” us to integrate that into the blog. You can do so by navigating to &lt;a href=&quot;https://github.com/data-ninja-blog/data-ninja-blog.github.io&quot;&gt;https://github.com/data-ninja-blog/data-ninja-blog.github.io&lt;/a&gt;, viewing your branch and creating a pull request as explained in the &lt;a href=&quot;https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request&quot;&gt;github documentation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;next-steps&quot;&gt;Next steps&lt;/h2&gt;
+
+&lt;p&gt;Next, we will be informed of your PR and start reviewing it as soon as possible. If we have questions or if changes need to be made to your submission, we will get in touch with you as soon as possible, otherwise, we will approve your pull request and let you know as soon as your contribution is online.&lt;/p&gt;
+
+&lt;p&gt;Thank you for contributing and sharing with the community.&lt;/p&gt;</content><author><name>benkettner</name></author><category term="blog" /><category term="welcome" /><category term="blog" /><summary type="html">This page is meant to be a collaborative effort.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://www.data-ninja.io/images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpg" /><media:content medium="image" url="https://www.data-ninja.io/images/2022-02-25-contributing/pexels-alan-stoddard-796217.jpg" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Welcome to the Dojo</title><link href="https://www.data-ninja.io/posts/2022-01-01-hero-welcome-to-dojo.html" rel="alternate" type="text/html" title="Welcome to the Dojo" /><published>2022-01-01T12:00:00+00:00</published><updated>2022-01-01T12:00:00+00:00</updated><id>https://www.data-ninja.io/posts/hero-welcome-to-dojo</id><content type="html" xml:base="https://www.data-ninja.io/posts/2022-01-01-hero-welcome-to-dojo.html">&lt;p&gt;You’re our hero!&lt;/p&gt;
+&lt;h1 id=&quot;welcome-to-the-data-dojo&quot;&gt;Welcome to the data dojo&lt;/h1&gt;
+
+&lt;p&gt;This blog collects some findings, learnings and ideas connected to processing data. While a lot of it will be centered around dotnet and Azure, there are other more general topics that go beyond the pure technical knowledge.&lt;/p&gt;
+
+&lt;p&gt;If you came here and found this page, feel free to level up, gain new skills and even share your ideas. This blog is hosted on GitHub pages and you can easily contribute by getting in touch or by creating a pull request to the repository contributing your content.&lt;/p&gt;</content><author><name>benkettner</name></author><category term="blog" /><category term="welcome" /><category term="blog" /><summary type="html">You’re our hero! Welcome to the data dojo</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://www.data-ninja.io/images/2022-01-01-hero-welcome-to-dojo/pexels-francesco-ungaro-96931.jpg" /><media:content medium="image" url="https://www.data-ninja.io/images/2022-01-01-hero-welcome-to-dojo/pexels-francesco-ungaro-96931.jpg" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
